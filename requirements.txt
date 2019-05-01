@@ -1,0 +1,2 @@
+Adafruit-GPIO==1.0.3
+Jetson.GPIO==0.1.2
