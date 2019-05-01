@@ -21,7 +21,6 @@ RIGHT_MOTOR_REG = 11
 MINIMUM_SPEED = 0.3
 
 
-
 class Wheel(object):
     def __init__(self, pin_pwm, pin1, pin2, i2c_bus, i2c_addr, i2c_reg):
         self.pin_pwm = pin_pwm
@@ -35,8 +34,8 @@ class Wheel(object):
         self.speed = 0
 
     def set_speed(self, speed):
-        if abs(speed) < MINIMUM_SPEED:
-            speed = 0
+        if abs(speed) < MINIMUM_SPEED and speed != 0:
+            speed = MINIMUM_SPEED * (speed/abs(speed))
         self.speed = int(speed*255)
         self.i2c.write8(self.i2c_reg, abs(self.speed))
         if speed > 0:
@@ -55,6 +54,9 @@ class Wheel(object):
 
 class Robot(object):
     def __init__(self):
+        GPIO.cleanup()
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(STB_PIN, GPIO.OUT)
         self.left_wheel = Wheel(LEFT_PWM,
                            LEFT_PIN1,
                            LEFT_PIN2,
@@ -67,15 +69,10 @@ class Robot(object):
                             I2C_BUS,
                             I2C_ADDR,
                             RIGHT_MOTOR_REG)
-        GPIO.setup(STB_PIN, GPIO.OUT)
         # wheel distance is 125 mm
         self.wheel_distance = 125
 
-    def init(self):
-        GPIO.cleanup()
-        GPIO.setmode(GPIO.BOARD)
-
-    def uninit(self):
+    def __del__(self):
         GPIO.cleanup()
 
     def _normalize(self, speed):
@@ -100,6 +97,7 @@ class Robot(object):
 
     def stop(self):
         self.set_motor_speed(0, 0)
+        GPIO.output(STB_PIN, GPIO.LOW)
 
     def left(self, speed):
         self.set_motor_speed(-speed, speed)

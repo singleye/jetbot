@@ -1,9 +1,10 @@
 import time
+from Jetson import GPIO
 from nano.robot import Robot
 
-print('Initialize system')
+
+print('Create robot')
 robot = Robot()
-robot.init()
 
 print('Moving forward')
 steps = 10
@@ -37,6 +38,3 @@ time.sleep(5)
 
 print('Stop')
 robot.stop()
-
-print('Cleanup system')
-robot.uninit()
