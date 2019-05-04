@@ -5,6 +5,7 @@ from nano.robot import Robot
 
 print('Create robot')
 robot = Robot()
+robot.startup()
 
 print('Moving forward')
 steps = 10
@@ -38,3 +39,4 @@ time.sleep(5)
 
 print('Stop')
 robot.stop()
+robot.shutdown()
