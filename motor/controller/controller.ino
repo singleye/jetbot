@@ -20,9 +20,19 @@
 
 #define BAUD_RATE         9600
 
+// range finder
+#define RF_TRIG_PIN       6
+#define RF_ECHO_PIN       7
+// 340m/s or 34000cm/s or 0.034cm/us
+#define SPEED_OF_SOUND    0.034
+#define RANGE_MAX         255
+#define RANGE_MIN         20
+// to speed up detection speed in unexpected conditions and to keep the maximum detection range of 340cm
+#define RF_TIMEOUT        20000
 
 static int motorASpeed = 0, motorBSpeed = 0;
 static int newSpeedA = 0, newSpeedB = 0;
+
 
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
@@ -52,6 +62,34 @@ void receiveEvent(int bytes) {
   Serial.println("");
 }
 
+void requestEvent() {
+  long duration = 0;
+  long distance = 0;
+  
+  Serial.println("Trigger RF detection");
+  digitalWrite(RF_TRIG_PIN, LOW);
+  delayMicroseconds(5);
+  digitalWrite(RF_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(RF_TRIG_PIN, LOW);
+
+  Serial.println("RF detecting");
+  pinMode(RF_ECHO_PIN, INPUT);
+  duration = pulseIn(RF_ECHO_PIN, HIGH, RF_TIMEOUT);
+  distance = SPEED_OF_SOUND*(duration/2);
+  Serial.print("  duration: ");
+  Serial.println(duration);
+
+  if (distance < 0) {
+    distance = 0;
+  }
+  if (distance > RANGE_MAX) {
+    distance = RANGE_MAX;
+  }
+  Wire.write(distance);
+}
+
+
 void setup() {
   // start serial for output
   Serial.begin(BAUD_RATE);
@@ -60,10 +98,15 @@ void setup() {
   Wire.begin(I2C_ADDRESS);
   // register event
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
 
   Serial.println("Initialize motors");
   analogWrite(PWM_A_PIN, motorASpeed);
   analogWrite(PWM_B_PIN, motorBSpeed);
+
+  Serial.println("Initialize range finder");
+  pinMode(RF_TRIG_PIN, OUTPUT);
+  pinMode(RF_ECHO_PIN, INPUT);
 }
 
 void loop() {
