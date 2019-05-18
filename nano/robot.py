@@ -25,6 +25,20 @@ RIGHT_MOTOR_REG = 11
 MINIMUM_SPEED = 0.3
 
 
+class RangeFinder(HasTraits):
+    range = Float()
+
+    def __init__(self, i2c_bus, i2c_addr):
+        self.i2c_bus = i2c_bus
+        self.i2c_addr = i2c_addr
+        self.i2c = I2C.get_i2c_device(i2c_addr, i2c_bus)
+        self.range = 0
+
+    def detect(self):
+        self.range = self.i2c.readRaw8()
+        return self.range
+
+
 class Wheel(HasTraits):
     speed = Float()
 
