@@ -30,9 +30,36 @@
 // to speed up detection speed in unexpected conditions and to keep the maximum detection range of 340cm
 #define RF_TIMEOUT        20000
 
+#define ASYNC_DETECT
+
 static int motorASpeed = 0, motorBSpeed = 0;
 static int newSpeedA = 0, newSpeedB = 0;
+static byte distance = 0;
 
+
+long detectRange() {
+  long duration = 0;
+  long distance = 0;
+
+  digitalWrite(RF_TRIG_PIN, LOW);
+  delayMicroseconds(5);
+  digitalWrite(RF_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(RF_TRIG_PIN, LOW);
+
+  pinMode(RF_ECHO_PIN, INPUT);
+  duration = pulseIn(RF_ECHO_PIN, HIGH, RF_TIMEOUT);
+  distance = SPEED_OF_SOUND*(duration/2);
+
+  if (distance < 0) {
+    distance = 0;
+  }
+  if (distance > RANGE_MAX) {
+    distance = RANGE_MAX;
+  }
+
+  return distance;
+}
 
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
@@ -62,33 +89,17 @@ void receiveEvent(int bytes) {
   Serial.println("");
 }
 
+// function handle distance query
 void requestEvent() {
-  long duration = 0;
-  long distance = 0;
-  
-  Serial.println("Trigger RF detection");
-  digitalWrite(RF_TRIG_PIN, LOW);
-  delayMicroseconds(5);
-  digitalWrite(RF_TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(RF_TRIG_PIN, LOW);
+#ifndef ASYNC_DETECT
+  long r = detectRange();
+  distance = r & 0xFF;
+  Serial.print("Distance: ");
+  Serial.println(distance);
+#endif
 
-  Serial.println("RF detecting");
-  pinMode(RF_ECHO_PIN, INPUT);
-  duration = pulseIn(RF_ECHO_PIN, HIGH, RF_TIMEOUT);
-  distance = SPEED_OF_SOUND*(duration/2);
-  Serial.print("  duration: ");
-  Serial.println(duration);
-
-  if (distance < 0) {
-    distance = 0;
-  }
-  if (distance > RANGE_MAX) {
-    distance = RANGE_MAX;
-  }
   Wire.write(distance);
 }
-
 
 void setup() {
   // start serial for output
@@ -107,7 +118,12 @@ void setup() {
   Serial.println("Initialize range finder");
   pinMode(RF_TRIG_PIN, OUTPUT);
   pinMode(RF_ECHO_PIN, INPUT);
+
+  long r = detectRange();
+  distance = r & 0xFF;
 }
+
+static int rangeDetectCounter = 0;
 
 void loop() {
   if (motorASpeed != newSpeedA) {
@@ -124,5 +140,10 @@ void loop() {
     analogWrite(PWM_B_PIN, motorBSpeed);
   }
 
-  delay(10);
+#ifdef ASYNC_DETECT
+  long r = detectRange();
+  distance = r & 0xFF;
+#endif
+
+  delay(100);
 }
