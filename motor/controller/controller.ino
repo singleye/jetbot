@@ -7,6 +7,8 @@
 
 #include <Wire.h>
 
+#define LOOP_DELAY          10
+
 // Device address
 #define I2C_ADDRESS       8
 
@@ -31,11 +33,12 @@
 #define RF_TIMEOUT        20000
 
 #define ASYNC_DETECT
+#define DETECT_INTERVAL     100
 
 static int motorASpeed = 0, motorBSpeed = 0;
 static int newSpeedA = 0, newSpeedB = 0;
 static byte distance = 0;
-
+static int rangeDetectCounter = 0;
 
 long detectRange() {
   long duration = 0;
@@ -123,8 +126,6 @@ void setup() {
   distance = r & 0xFF;
 }
 
-static int rangeDetectCounter = 0;
-
 void loop() {
   if (motorASpeed != newSpeedA) {
     motorASpeed = newSpeedA;
@@ -141,9 +142,15 @@ void loop() {
   }
 
 #ifdef ASYNC_DETECT
-  long r = detectRange();
-  distance = r & 0xFF;
+  if (rangeDetectCounter > DETECT_INTERVAL/LOOP_DELAY) {
+    long r = detectRange();
+    distance = r & 0xFF;
+    Serial.println(distance);
+    rangeDetectCounter = 0;
+  }else {
+    rangeDetectCounter++;
+  }
 #endif
 
-  delay(100);
+  delay(LOOP_DELAY);
 }
