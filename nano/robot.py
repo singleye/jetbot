@@ -1,7 +1,8 @@
+import time
+import logging
 from Jetson import GPIO
 from Adafruit_GPIO import I2C
 from traitlets import HasTraits, Float, Instance, observe
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,8 @@ class Wheel(HasTraits):
 class Robot(HasTraits):
     left_wheel = Instance(Wheel)
     right_wheel = Instance(Wheel)
+    TURNING_SPEED = 0.5
+    DEGREE_PER_SEC = 117
 
     def __init__(self):
         GPIO.setwarnings(False)
@@ -99,9 +102,7 @@ class Robot(HasTraits):
                             I2C_BUS,
                             I2C_ADDR,
                             RIGHT_MOTOR_REG)
-        # wheel distance is 125 mm
-        self.wheel_distance = 125
-
+        self.range_finder = RangeFinder(I2C_BUS, I2C_ADDR)
         self._running = False
 
     def startup(self):
@@ -149,9 +150,16 @@ class Robot(HasTraits):
         self.set_motor_speed(speed, -speed)
         speed = self._normalize(speed)
 
-    def turn(self, speed, radius):
+    def turn(self, angle):
         '''
-        * speed: motor speed
-        * radius: turning radius
+        * angle: positive angle to turn right, negative angle to turn left
         '''
-        raise NotImplementedError('Method not implemented')
+        if angle == 0:
+            return
+        interval = (1.0*abs(angle))/self.DEGREE_PER_SEC
+        if angle < 0:
+            self.set_motor_speed(-self.TURNING_SPEED, self.TURNING_SPEED)
+        else:
+            self.set_motor_speed(self.TURNING_SPEED, -self.TURNING_SPEED)
+        time.sleep(interval)
+        self.set_motor_speed(0, 0)
